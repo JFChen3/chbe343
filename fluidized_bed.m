@@ -16,6 +16,18 @@ pdrop_air_upper = [0, 2.6, 6.0, 8.8, 12.0, 15.1, 18.3, 21.5, 24.7, 28.6, 32.2, 3
 bed_height_air_lower = [316,316,316,316,316,316,316,316,316,316,316,316,316,317,318,323,328,330,335,340,340,360];
 bed_height_air_upper = [316,316,316,316,316,316,316,316,316,316,316,316,316,317,318,323,328,335,340,350,360,390];
 
+%======================== Ethan Added Part =====================================
+%Correct air flow rate to experimental conditions
+R = 8.314; % (L*kPa)/(K*mol)
+P_original = 100; %kPa (1 bar)
+T_original = 293; %K
+T_experimental = 294.261; %K (70 degF)
+P_experimental = pdrop_air_lower; %in cmH20
+P_experimental = 100 + P_experimental .* .0980665; % convert cmH20 guage to kPa absolute
+molar_flow_air = P_original .* flow_rate_air ./ (R * T_original);
+flow_rate_air_corrected = molar_flow_air .*  ( R * T_experimental ./ P_experimental );
+%====use flow_rate_air_corrected rather than flow_rate_air to use corrected values====
+
 %Water column plot
 plot(flow_rate_water,pdrop_water,'bo-',flow_rate_water,bed_height_water,'g^-')
 legend('Pressure Drop','Bed Height','Location','Northwest')
