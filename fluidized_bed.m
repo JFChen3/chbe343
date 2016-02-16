@@ -58,13 +58,13 @@ bed_height = bed_height/1000; % Convert mm to m
 bed_volume = bed_height.*column_area; %m^3
 
 if fluid == 1
-    pdrop = pdrop/9.80665; %Convert mm H2O to Pa
+    pdrop = pdrop*9.80665; %Convert mm H2O to Pa
     epsilon = get_porosity(0.838,2.5e3,bed_volume);
     velocity = get_superficial_velocity(flow_rate, column_area); %m/s
     density = 1000; %kg/m^3
     viscosity = 1.002;%Pa*s
 else
-    pdrop = pdrop/98.0665; %Convert cm H2O to Pa
+    pdrop = pdrop*98.0665; %Convert cm H2O to Pa
     %======================== Ethan Added Part =====================================
     %Correct air flow rate to experimental conditions
     R = 8.314; % (L*kPa)/(K*mol)
