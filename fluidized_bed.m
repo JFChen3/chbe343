@@ -16,18 +16,6 @@ pdrop_air_upper = [0, 2.6, 6.0, 8.8, 12.0, 15.1, 18.3, 21.5, 24.7, 28.6, 32.2, 3
 bed_height_air_lower = [316,316,316,316,316,316,316,316,316,316,316,316,316,317,318,323,328,330,335,340,340,360];
 bed_height_air_upper = [316,316,316,316,316,316,316,316,316,316,316,316,316,317,318,323,328,335,340,350,360,390];
 
-%======================== Ethan Added Part =====================================
-%Correct air flow rate to experimental conditions
-R = 8.314; % (L*kPa)/(K*mol)
-P_original = 100; %kPa (1 bar)
-T_original = 293; %K
-T_experimental = 294.261; %K (70 degF)
-P_experimental = pdrop_air_lower; %in cmH20
-P_experimental = 100 + P_experimental .* .0980665; % convert cmH20 guage to kPa absolute
-molar_flow_air = P_original .* flow_rate_air ./ (R * T_original);
-flow_rate_air_corrected = molar_flow_air .*  ( R * T_experimental ./ P_experimental );
-%====use flow_rate_air_corrected rather than flow_rate_air to use corrected values====
-
 %Water column plot
 plot(flow_rate_water,pdrop_water,'bo-',flow_rate_water,bed_height_water,'g^-')
 legend('Pressure Drop','Bed Height','Location','Northwest')
@@ -70,13 +58,13 @@ bed_height = bed_height/1000; % Convert mm to m
 bed_volume = bed_height.*column_area; %m^3
 
 if fluid == 1
-    pdrop = pdrop*9.80665; %Convert mm H2O to Pa
+    pdrop = pdrop/9.80665; %Convert mm H2O to Pa
     epsilon = get_porosity(0.838,2.5e3,bed_volume);
     velocity = get_superficial_velocity(flow_rate, column_area); %m/s
     density = 1000; %kg/m^3
     viscosity = 1.002;%Pa*s
 else
-    pdrop = pdrop*98.0665; %Convert cm H2O to Pa
+    pdrop = pdrop/98.0665; %Convert cm H2O to Pa
     %======================== Ethan Added Part =====================================
     %Correct air flow rate to experimental conditions
     R = 8.314; % (L*kPa)/(K*mol)
@@ -111,12 +99,12 @@ a = -h;
 b = (1.75*L.*Vsm.^2.*(1-epsilon).*rho)./epsilon.^3;
 c = (150*L.*Vsm.*(1-epsilon).^2.*mu)./epsilon.^3;
 
-solutions = roots([a,b,c]);
 
-a
-b
-c
-particle_diameter = solutions(solutions > 0); %Get the positive root
+particle_diameter = zeros(1,numel(a));
+for i = 1:numel(a)-1
+    solutions = roots([a(i+1) b(i+1) c(i+1)]);
+    particle_diameter(i,:) = solutions(solutions >= 0); %Get the positive root
+end
 
 end
 
