@@ -62,12 +62,12 @@ if fluid == 1
     epsilon = get_porosity(0.838,2.5e3,bed_volume);
     velocity = get_superficial_velocity(flow_rate, column_area); %m/s
     density = 1000; %kg/m^3
-    viscosity = 1.002;%Pa*s
+    viscosity = 1.002e-3;%Pa*s
 else
     pdrop = pdrop*98.0665; %Convert cm H2O to Pa
     %======================== Ethan Added Part =====================================
     %Correct air flow rate to experimental conditions
-    R = 8.314; % (L*kPa)/(K*mol)
+    R = 8.314; % (L*kPa)/(K*mol) m3?Pa?K?1?mol?1
     P_original = 100; %kPa (1 bar)
     T_original = 293; %K
     T_experimental = 294.261; %K (70 degF)
@@ -79,7 +79,7 @@ else
     velocity = get_superficial_velocity(flow_rate_air_corrected, column_area); %m/s
     P_atm = 101.325;
     density = P_atm*28.97/(R*T_experimental); %kg/m^3
-    viscosity = 1.846; %Pa*s
+    viscosity = 1.846e-5; %Pa*s
     epsilon = get_porosity(0.865,2.5e3,bed_volume);
 end
 
