@@ -32,15 +32,18 @@ plot(flow_rate_air,pdrop_air_upper,'bo-',flow_rate_air,bed_height_air_upper,'g^-
 xlabel('Flow Rate(L/min at 1 bar abs, 20^o C)')
 ylabel('Pressure Drop(cm water), Bed Height(mm)')
 
-%Calculate ballotini size
+%Calculate ballotini size using fixed bed values
 %Water
 disp('Ballotini size, water column: ')
-size_water = calc_ballotini_size(flow_rate_water, pdrop_water, bed_height_water, 1);
+size_water = calc_ballotini_size(flow_rate_water(1:5), pdrop_water(1:5), bed_height_water(1:5), 1);
 disp(size_water)
+fprintf('Average: %f \n',mean(size_water))
 
-disp('Ballotini size, air')
-size_air = calc_ballotini_size(flow_rate_air, pdrop_air_lower, bed_height_air_lower,2);
-disp(size_air);
+disp('Ballotini size, air: ')
+size_air = calc_ballotini_size(flow_rate_air(1:13), pdrop_air_lower(1:13), bed_height_air_lower(1:13),2);
+disp(size_air)
+fprintf('Average: %f \n',mean(size_air))
+
 end
 
 function [ballotini_size] = calc_ballotini_size(flow_rate, pdrop, bed_height, fluid)
@@ -52,13 +55,13 @@ column_diameter = 2.0*2.54/100; %column diameter in m
 column_area = pi*(column_diameter/2)^2; %column cross sectional area, m^2
 
 %Convert inputs to correct units
-flow_rate = flow_rate/60000; %Convert L/min to m^3/s
-bed_height = bed_height/1000; % Convert mm to m
+flow_rate = flow_rate./60000; %Convert L/min to m^3/s
+bed_height = bed_height./1000; % Convert mm to m
 
 bed_volume = bed_height.*column_area; %m^3
 
 if fluid == 1
-    pdrop = pdrop*9.80665; %Convert mm H2O to Pa
+    pdrop = pdrop.*9.80665; %Convert mm H2O to Pa
     epsilon = get_porosity(0.838,2.5e3,bed_volume);
     velocity = get_superficial_velocity(flow_rate, column_area); %m/s
     density = 1000; %kg/m^3
@@ -103,7 +106,7 @@ c = (150*L.*Vsm.*(1-epsilon).^2.*mu)./epsilon.^3;
 particle_diameter = zeros(1,numel(a));
 for i = 1:numel(a)-1
     solutions = roots([a(i+1) b(i+1) c(i+1)]);
-    particle_diameter(i,:) = solutions(solutions >= 0); %Get the positive root
+    particle_diameter(i) = solutions(solutions >= 0); %Get the positive root
 end
 
 end
