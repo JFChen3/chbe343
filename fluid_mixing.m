@@ -56,13 +56,13 @@ v = get(h,'title');
 set(v,'string','Impeller Size, mm');
 
 %Power Number vs Reynolds Number
-density = 850; %mineral oil, kg/m^3
-viscosity = 0.0153; %Pa*s, DOUBLE CHECK THIS VALUE
+density = 865; %mineral oil, kg/m^3
+viscosity = 110e-6*density; %Pa*s
 % all_rps = 60*[rpm_6265 rpm_6243 rpm_6221];
 % all_power = [power_6265 power_6243 power_6221];
-[Re_6265, P_6265] = dimensionless_groups(0.062*2, rpm_6265./60, density, viscosity, power_6265);
-[Re_6243, P_6243] = dimensionless_groups(0.062*2, rpm_6243./60, density, viscosity, power_6243);
-[Re_6221, P_6221] = dimensionless_groups(0.062*2, rpm_6221./60, density, viscosity, power_6221);
+[Re_6265, P_6265] = dimensionless_groups(0.062*2+0.055, rpm_6265./60, density, viscosity, power_6265);
+[Re_6243, P_6243] = dimensionless_groups(0.062*2+0.055, rpm_6243./60, density, viscosity, power_6243);
+[Re_6221, P_6221] = dimensionless_groups(0.062*2+0.055, rpm_6221./60, density, viscosity, power_6221);
 
 % [reynolds_number, power_number] = dimensionless_groups(lever_arm*2, all_rps, density, viscosity, all_power);
 % reynolds_number
