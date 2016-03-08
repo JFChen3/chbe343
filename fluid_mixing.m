@@ -44,6 +44,7 @@ end
 disp('---------------------------------------------------------------------------')
 
 %Power vs speed plot
+figure(1)
 hold on
 plot(rot_speed_6265, power_6265, 'ro-')
 plot(rot_speed_6243, power_6243, 'g^-')
@@ -59,15 +60,15 @@ density = 850; %mineral oil, kg/m^3
 viscosity = 0.0153; %Pa*s, DOUBLE CHECK THIS VALUE
 % all_rps = 60*[rpm_6265 rpm_6243 rpm_6221];
 % all_power = [power_6265 power_6243 power_6221];
-[Re_6265, P_6265] = dimensionless_groups(lever_arm*2, 60*rpm_6265, density, viscosity, power_6265);
-[Re_6243, P_6243] = dimensionless_groups(lever_arm*2, 60*rpm_6243, density, viscosity, power_6243);
-[Re_6221, P_6221] = dimensionless_groups(lever_arm*2, 60*rpm_6221, density, viscosity, power_6221);
+[Re_6265, P_6265] = dimensionless_groups(0.062*2, rpm_6265./60, density, viscosity, power_6265);
+[Re_6243, P_6243] = dimensionless_groups(0.062*2, rpm_6243./60, density, viscosity, power_6243);
+[Re_6221, P_6221] = dimensionless_groups(0.062*2, rpm_6221./60, density, viscosity, power_6221);
 
 % [reynolds_number, power_number] = dimensionless_groups(lever_arm*2, all_rps, density, viscosity, all_power);
 % reynolds_number
 % power_number
-figure
-plot(Re_6265, P_6265, 'r.-', Re_6243, P_6243, 'g.-', Re_6221, P_6221, 'b.-')
+figure(2)
+loglog(Re_6265, P_6265, 'r.-', Re_6243, P_6243, 'g.-', Re_6221, P_6221, 'b.-')
 xlabel('Reynolds Number')
 ylabel('Power Number')
 
