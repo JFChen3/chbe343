@@ -78,9 +78,9 @@ end
 function [rot_speed, torque, power] = calc_params(rpm, force, lever_arm)
 % Calculate rotational speed, torque, and power
 
-rot_speed = rpm./(60*2*pi); %rad/s
+rot_speed = 2*pi*rpm./60; %rad/s
 torque = force.*lever_arm; %N*m
-power = 2*pi*torque.*rot_speed; %W
+power = torque.*rot_speed./(2*pi); %W
 
 end
 
