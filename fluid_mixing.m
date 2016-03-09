@@ -13,7 +13,7 @@ disp('Calculated Parameters, 62x65mm impeller')
 disp('---------------------------------------------------------------------------')
 disp('Rotation, rpm   Force, N   Rotational Speed, rad/s   Torque, N*m   Power, W')
 for i = 1:numel(rpm_6265)
-    fprintf('%.1f             %.1f       %.1f                      %.1f          %.1f \n',rpm_6265(i), force_6265(i), rot_speed_6265(i), torque_6265(i), power_6265(i))
+    fprintf('%.1f             %.2f       %.1f                      %.2f          %.1f \n',rpm_6265(i), force_6265(i), rot_speed_6265(i), torque_6265(i), power_6265(i))
 end
 disp('---------------------------------------------------------------------------')
 
@@ -26,7 +26,7 @@ disp('Calculated Parameters, 62x43mm impeller')
 disp('---------------------------------------------------------------------------')
 disp('Rotation, rpm   Force, N   Rotational Speed, rad/s   Torque, N*m   Power, W')
 for i = 1:numel(rpm_6243)
-    fprintf('%.1f             %.1f       %.1f                      %.1f          %.1f \n',rpm_6243(i), force_6243(i), rot_speed_6243(i), torque_6243(i), power_6243(i))
+    fprintf('%.1f             %.2f       %.1f                      %.2f          %.1f \n',rpm_6243(i), force_6243(i), rot_speed_6243(i), torque_6243(i), power_6243(i))
 end
 disp('---------------------------------------------------------------------------')
 
@@ -39,16 +39,14 @@ disp('Calculated Parameters, 62x21mm impeller')
 disp('---------------------------------------------------------------------------')
 disp('Rotation, rpm   Force, N   Rotational Speed, rad/s   Torque, N*m   Power, W')
 for i = 1:numel(rpm_6221)
-    fprintf('%.1f             %.1f       %.1f                      %.1f          %.1f \n',rpm_6221(i), force_6221(i), rot_speed_6221(i), torque_6221(i), power_6221(i))
+    fprintf('%.1f             %.2f       %.1f                      %.2f          %.1f \n',rpm_6221(i), force_6221(i), rot_speed_6221(i), torque_6221(i), power_6221(i))
 end
 disp('---------------------------------------------------------------------------')
 
 %Power vs speed plot
 figure(1)
 hold on
-plot(rot_speed_6265, power_6265, 'ro-')
-plot(rot_speed_6243, power_6243, 'g^-')
-plot(rot_speed_6221, power_6221, 'b.-')
+plot(rot_speed_6265, power_6265, 'ro-', rot_speed_6243, power_6243, 'g^-', rot_speed_6221, power_6221, 'b.-')
 xlabel('Rotational speed, rad/s')
 ylabel('Power, W')
 h = legend('62 x 65','62 x 43','62 x 21','Location','Southeast');
@@ -68,9 +66,12 @@ viscosity = 110e-6*density; %Pa*s
 % reynolds_number
 % power_number
 figure(2)
-loglog(Re_6265, P_6265, 'r.-', Re_6243, P_6243, 'g.-', Re_6221, P_6221, 'b.-')
+loglog(Re_6265, P_6265, 'ro-', Re_6243, P_6243, 'g^-', Re_6221, P_6221, 'b.-')
 xlabel('Reynolds Number')
 ylabel('Power Number')
+h = legend('62 x 65','62 x 43','62 x 21','Location','Southeast');
+v = get(h,'title');
+set(v,'string','Impeller Size, mm');
 
 end
 
