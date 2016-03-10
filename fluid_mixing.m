@@ -69,9 +69,11 @@ figure(2)
 loglog(Re_6265, P_6265, 'ro-', Re_6243, P_6243, 'g^-', Re_6221, P_6221, 'b.-')
 xlabel('Reynolds Number')
 ylabel('Power Number')
-h = legend('62 x 65','62 x 43','62 x 21','Location','Southeast');
+axis([200 2000 .8 10])
+h = legend('62 x 65','62 x 43','62 x 21','Location','NorthEast');
 v = get(h,'title');
 set(v,'string','Impeller Size, mm');
+title('Power Number vs. Reynolds Number')
 
 end
 
@@ -80,7 +82,7 @@ function [rot_speed, torque, power] = calc_params(rpm, force, lever_arm)
 
 rot_speed = 2*pi*rpm./60; %rad/s
 torque = force.*lever_arm; %N*m
-power = torque.*rot_speed./(2*pi); %W
+power = torque.*rot_speed; %W
 
 end
 
