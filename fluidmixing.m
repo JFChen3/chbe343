@@ -48,6 +48,12 @@ h = legend('62 x 65','62 x 43','62 x 21','Location','NorthEast');
 v = get(h,'title');
 set(v,'string','Impeller Size, mm');
 
+%Print stuff
+disp('             Power Number');
+fprintf('62 x 65 mm: \t%.2f\n', Po1)
+fprintf('62 x 43 mm: \t%.2f\n', Po2)
+fprintf('62 x 21 mm: \t%.2f\n', Po3)
+
 end
 
 function [Re] = reynolds(D, N, rho, mu)
