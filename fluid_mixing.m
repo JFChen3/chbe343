@@ -73,7 +73,6 @@ axis([200 2000 .8 10])
 h = legend('62 x 65','62 x 43','62 x 21','Location','NorthEast');
 v = get(h,'title');
 set(v,'string','Impeller Size, mm');
-title('Power Number vs. Reynolds Number')
 
 end
 
