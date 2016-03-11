@@ -81,6 +81,35 @@ set(v,'string','Impeller Geometry');
 fprintf('Curve 2: \t%.2f\n', Po_lit1)
 fprintf('Curve 3: \t%.2f\n', Po_lit2)
 
+% For the 8 bladed impeller
+alpha_8 = 8;
+r1_8 = .051;
+r2_8 = .071;
+h_8 = .012;
+
+omega_8 = 0:45;
+N_8 = omega_8 ./ (2 * pi);
+D_8 = 2 * r2_8;
+
+Po_8 = powernum(alpha_8, Cd, h_8, r2_8, r1_8);
+Power_8 = Po_8 .* rho .* N_8.^3 .* D_8.^5;
+
+Re_8 = reynolds(D_8, N_8, rho, mu);
+
+% Plotting
+figure()
+hold on
+plot(omega_8,Power_8)
+xlabel('Rotational Speed, rad/s')
+ylabel('Power, W')
+
+figure()
+Re_Vec = 1e3:1e5;
+Po_Vec = ones(1,numel(Re_Vec)).*(Po_8);
+plot(Re_Vec, Po_Vec)
+xlabel('Reynolds Number')
+ylabel('Power Number')
+
 end
 
 function [Re] = reynolds(D, N, rho, mu)
