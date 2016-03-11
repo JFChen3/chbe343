@@ -3,7 +3,7 @@ close all
 
 %constants
 alpha = 2; %# of blades
-Cd = 1.28; %from drag coeffs doc
+Cd = 2; %from drag coeffs doc
 rho = 864; %kg/m^3
 mu = 0.0952; %kg/m*s
 
@@ -15,12 +15,6 @@ w = 0.062; %m
 r1 = 0.055/2; %m
 r2 = r1 + w; %m
 D = 2*r2;
-
-%for literature
-% r1 = 0;
-% D = 8*h;
-% r2 = D/2;
-% w = r2 - r1;
 
 N = linspace(0.1, 10^5); %rev/sec
 Re = reynolds(D, N, rho, mu);
@@ -42,8 +36,7 @@ loglog(Re, Povec2, 'g')
 loglog(Re, Povec3, 'b')
 xlabel('Reynolds number')
 ylabel('Power Number')
-title('Power Number Derived from Drag Force')
-axis([0 100000 0.4 5])
+axis([0 100000 0.7 11])
 h = legend('62 x 65','62 x 43','62 x 21','Location','NorthEast');
 v = get(h,'title');
 set(v,'string','Impeller Size, mm');
@@ -53,6 +46,40 @@ disp('             Power Number');
 fprintf('62 x 65 mm: \t%.2f\n', Po1)
 fprintf('62 x 43 mm: \t%.2f\n', Po2)
 fprintf('62 x 21 mm: \t%.2f\n', Po3)
+
+%for literature curves
+alpha_lit = 6;
+h = 1;
+r1 = 0;
+D_lit1 = 5*h;
+r2_lit1 = D_lit1/2;
+D_lit2 = 8*h;
+r2_lit2 = D_lit2/2;
+
+%curve 2, W/D = 1/5
+Re_lit1 = reynolds(D_lit1, N, rho, mu);
+Po_lit1 = powernum(alpha_lit, Cd, h, r2_lit1, r1);
+Povec_lit1 = Po_lit1*ones(size(Re_lit1));
+
+%curve 4, W/D = 1/8
+Re_lit2 = reynolds(D_lit2, N, rho, mu);
+Po_lit2 = powernum(alpha_lit, Cd, h, r2_lit2, r1);
+Povec_lit2 = Po_lit2*ones(size(Re_lit2));
+
+%the plotting
+figure
+loglog(Re, Povec_lit1, 'r')
+hold on
+loglog(Re, Povec_lit2, 'g')
+xlabel('Reynolds number')
+ylabel('Power Number')
+axis([0 100000 0.7 11])
+h = legend('Curve 2, W/D = 1/5', 'Curve 4, W/D = 1/8','Location','SouthEast');
+v = get(h,'title');
+set(v,'string','Impeller Geometry');
+
+fprintf('Curve 2: \t%.2f\n', Po_lit1)
+fprintf('Curve 3: \t%.2f\n', Po_lit2)
 
 end
 
