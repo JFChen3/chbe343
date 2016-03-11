@@ -73,8 +73,8 @@ plot(rot_speed_6265, power_6265, 'ro-', rot_speed_6243, power_6243, 'g^-', rot_s
 xlabel('Rotational speed, rad/s')
 ylabel('Power, W')
 h = legend('62 x 65','62 x 43','62 x 21','Location','Southeast');
-v = get(h,'title');
-set(v,'string','Impeller Size, mm');
+%v = get(h,'title');
+%set(v,'string','Impeller Size, mm');
 
 %Power Number vs Reynolds Number
 density = 865; %mineral oil, kg/m^3
@@ -94,8 +94,8 @@ xlabel('Reynolds Number')
 ylabel('Power Number')
 axis([200 2000 .8 10])
 h = legend('62 x 65','62 x 43','62 x 21','Location','NorthEast');
-v = get(h,'title');
-set(v,'string','Impeller Size, mm');
+%v = get(h,'title');
+%set(v,'string','Impeller Size, mm');
 
 end
 
@@ -186,8 +186,37 @@ xlabel('Reynolds number')
 ylabel('Power Number')
 axis([10 100000 0.7 11])
 h = legend('Curve 2, W/D = 1/5', 'Curve 4, W/D = 1/8','Location','SouthEast');
-v = get(h,'title');
-set(v,'string','Impeller Geometry');
+%v = get(h,'title');
+%set(v,'string','Impeller Geometry');
+
+% For the 8 bladed impeller
+alpha_8 = 8;
+r1_8 = .051;
+r2_8 = .071;
+h_8 = .012;
+
+omega_8 = 0:45;
+N_8 = omega_8 ./ (2 * pi);
+D_8 = 2 * r2_8;
+
+Po_8 = powernum(alpha_8, Cd, h_8, r2_8, r1_8);
+Power_8 = Po_8 .* rho .* N_8.^3 .* D_8.^5;
+
+Re_8 = reynolds(D_8, N_8, rho, mu);
+
+% Plotting
+figure()
+hold on
+plot(omega_8,Power_8)
+xlabel('Rotational Speed, rad/s')
+ylabel('Power, W')
+
+figure()
+Re_Vec = 1e3:1e5;
+Po_Vec = ones(1,numel(Re_Vec)).*(Po_8);
+plot(Re_Vec, Po_Vec)
+xlabel('Reynolds Number')
+ylabel('Power Number')
 
 %Print stuff
 disp(' ')
