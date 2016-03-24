@@ -57,6 +57,38 @@ disp(error_coriolis')
 
 disp((head_loss_v - head_loss_o)./head_loss_o)
 
+% Part 4: compare head loss for orifice and venturi
+measured_plot = reorder(measured);
+head_loss_o_plot = reorder(head_loss_o);
+head_loss_v_plot = reorder(head_loss_v);
+diff_head_o_plot = reorder(diff_head_o);
+diff_head_v_plot = reorder(diff_head_v);
+
+figure
+hold on
+plot(measured_plot, head_loss_o_plot, 'r--', 'LineWidth', 1.2);
+plot(measured_plot, head_loss_v_plot, 'g-x', 'LineWidth', 1.2)
+xlabel('Flow Rate (m^3/s)')
+ylabel('Head Loss (inches H2O)')
+legend('Orifice Plate', 'Venturi Meter', 'Location', 'SouthEast')
+
+avg_head_loss_v = sum(head_loss_v)/length(head_loss_v);
+avg_head_loss_o = sum(head_loss_o)/length(head_loss_o);
+
+fprintf('Average head loss for Venturi meter:\t %.2f in H2O\n', avg_head_loss_v)
+fprintf('Average head loss for orifice meter:\t %.2f in H2O\n', avg_head_loss_o)
+
+%Part 5: compare differential head for venturi and oriface plate
+figure
+hold on
+plot(measured_plot, diff_head_o_plot, 'r--', 'LineWidth', 1.2)
+plot(measured_plot, diff_head_v_plot, 'g-x', 'LineWidth', 1.2)
+xlabel('Flow Rate (m^3/s)')
+ylabel('Differential Head (inches H2O)')
+legend('Orifice Plate', 'Venturi Meter', 'Location', 'NorthWest')
+
+avgscale = mean(diff_head_v_plot./diff_head_o_plot);
+
 end
 
 function [velocity, flow_rate] = orifice(Cd, d0, d1, head)
@@ -74,4 +106,10 @@ A = pi*(d/2)^2;
 velocity = sqrt(2.*9.81.*head);
 flow_rate = A.*velocity;
 
+end
+
+function [ordered] = reorder(vector)
+%reorders the vectors for plotting
+
+ordered = [vector(2:3) vector(1) vector(4:end)];
 end
