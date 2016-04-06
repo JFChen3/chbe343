@@ -18,7 +18,7 @@ abs_C = [0.001, 0.053, 0.111, 0.085, 0.060, 0.043, 0.032, 0.025, 0.021, 0.020, 0
 %%Activation Energies
 [E1, uncert_1] = calc_Ea([k1star_A, k1star_B, k1star_C],[29.5, 36.4, 48.5]+273.15);
 [E2, uncert_2] = calc_Ea([k2_A, k2_B, k2_C],[29.5, 36.4, 48.5]+273.15);
-Hrxn = E2 - E1;
+Hrxn = E1-E2;
 
 fprintf('-----------------------------------\n')
 fprintf('Activation Energies (J/mol) \n')
