@@ -60,7 +60,7 @@ fprintf('Uncertainty, slope     %4.4e\n', sigma_m)
 fprintf('Uncertainty, intercept %4.4e\n', sigma_b)
 
 figure
-plot(time, abs)
+plot(time, abs, '.-')
 xlabel('Time (s)')
 ylabel('Absorbance')
 legend(sprintf('T=%.1f C',T))
@@ -109,7 +109,7 @@ plot(time, log_A, 'o')
 plot(time, p(1).*time + p(2))
 xlabel('Time (s)')
 ylabel('log((A-Aeq)/(A0-Aeq))')
-legend(sprintf('Data, T=%.1f C',T), 'Fit')
+legend(sprintf('Data, T=%.1f C',T), sprintf('Fit, y=%.4f*t',slope))
 
 end
 
@@ -129,6 +129,12 @@ y = log(abs(k));
 p = polyfit(x, y, 1);
 Ea = -p(1);
 preexp = exp(p(2));
+
+figure
+plot(x,y,'o',x,p(1)*x+p(2),'-')
+xlabel('1/RT')
+ylabel('ln(|k|)')
+legend('Data',sprintf('Fit, y=%.1fx+%.1f',p(1),p(2)))
 
 [uncert, exp_uncert] = linear_reg_uncertainty(x, y, p(1), p(2));
 
