@@ -16,8 +16,8 @@ abs_C = [0.001, 0.053, 0.111, 0.085, 0.060, 0.043, 0.032, 0.025, 0.021, 0.020, 0
 [k1star_C, k2_C] = compute_all(time_C(3:numel(time_C)-5), abs_C(3:numel(time_C)-5), 0.2, 48.5);
 
 %%Activation Energies
-[E1, uncert_1] = calc_Ea([k1star_A, k1star_B, k1star_C],[29.5, 36.4, 48.5]+273.15);
-[E2, uncert_2] = calc_Ea([k2_A, k2_B, k2_C],[29.5, 36.4, 48.5]+273.15);
+[E1, uncert_1, preexp1, exp_uncert1] = calc_Ea([k1star_A, k1star_B, k1star_C],[29.5, 36.4, 48.5]+273.15);
+[E2, uncert_2, preexp2, exp_uncert2] = calc_Ea([k2_A, k2_B, k2_C],[29.5, 36.4, 48.5]+273.15);
 Hrxn = E1-E2;
 
 fprintf('-----------------------------------\n')
@@ -25,11 +25,20 @@ fprintf('Activation Energies (J/mol) \n')
 fprintf('-----------------------------------\n')
 fprintf('E1                       %4.4e \n', E1)
 fprintf('Uncertainty              %4.4e \n', uncert_1)
+fprintf('Pre-Exponential          %4.4e \n', preexp1)
+fprintf('Uncertainty              %4.4e \n', exp_uncert1)
+fprintf('-----------------------------------\n')
 fprintf('E2                       %4.4e \n', E2)
 fprintf('Uncertainty              %4.4e \n', uncert_2)
+fprintf('Pre-Exponential          %4.4e \n', preexp2)
+fprintf('Uncertainty              %4.4e \n', exp_uncert2)
 fprintf('-----------------------------------\n')
 fprintf('Heat of Reaction: %4.4e J/mol \n', Hrxn)
 
+end
+
+function concentration = conc_from_rate(k1,k2,c10,t)
+    concentration = k2/(k1+k2)*c10 + k1/(k1+k2).*exp(-(k1+k2).*t).*c10;
 end
 
 function [k1star, k2] = compute_all(time, abs, c_factor, T)
@@ -55,6 +64,17 @@ plot(time, abs)
 xlabel('Time (s)')
 ylabel('Absorbance')
 legend(sprintf('T=%.1f C',T))
+
+% Plot to validate the kinetic model
+conc = conc_from_rate(k1star,k2,A0,time);
+
+figure
+hold on
+plot(time,abs,'rx')
+plot(time,conc)
+xlabel('Time (s)')
+ylabel('Absorbance')
+legend(sprintf('T=%.1f C, Data',T),'Model Generated from Rate Constants')
 
 end
 
@@ -100,7 +120,7 @@ k2 = -slope/(1+C);
 k1_star = -slope-k2;
 end
 
-function [Ea, uncert] = calc_Ea(k, T)
+function [Ea, uncert, preexp, exp_uncert] = calc_Ea(k, T)
 %Temp must be in Kelvin
 
 x = 1./(8.314*T);
@@ -108,8 +128,11 @@ y = log(abs(k));
 
 p = polyfit(x, y, 1);
 Ea = -p(1);
+preexp = exp(p(2));
 
-[uncert, ~] = linear_reg_uncertainty(x, y, p(1), p(2));
+[uncert, exp_uncert] = linear_reg_uncertainty(x, y, p(1), p(2));
+
+exp_uncert = abs(preexp*exp_uncert);
 
 end
 
