@@ -49,6 +49,9 @@ function [k1star, k2] = compute_all(time, abs, c_factor, T)
 %Uncertainty
 [sigma_m, sigma_b] = linear_reg_uncertainty(time,log((abs-Aeq)/(A0-Aeq)),slope,0);
 
+%Check c2 at equilibrium
+c2_eq = check_c2(A0, Aeq, k1star, k2);
+
 fprintf('------------------------------\n')
 fprintf('Results for T=%.1f C \n',T)
 fprintf('------------------------------\n')
@@ -58,6 +61,7 @@ fprintf('k1*                    %4.4e\n', k1star)
 fprintf('k2                     %4.4e\n', k2)
 fprintf('Uncertainty, slope     %4.4e\n', sigma_m)
 fprintf('Uncertainty, intercept %4.4e\n', sigma_b)
+fprintf('Equilibrium c2         %.4f\n', c2_eq)
 
 figure
 plot(time, abs, '.-')
@@ -118,6 +122,13 @@ function [k1_star, k2] = rxn_constants(slope, A0, Aeq)
 C = (A0 - Aeq)/Aeq;
 k2 = -slope/(1+C);
 k1_star = -slope-k2;
+end
+
+function [c2_eq] = check_c2(A0, Aeq, k1, k2)
+
+K = k1/k2;
+c2_eq = (A0-Aeq)/(K*Aeq);
+
 end
 
 function [Ea, uncert, preexp, exp_uncert] = calc_Ea(k, T)
