@@ -67,30 +67,37 @@ P2_15a = P2_15 + 14.7; % psia
 flow_rate_15 = [0,0,0,0.8,0.9,1.0,1.2,1.2,1.4,1.4,1.5,1.6,1.6,1.6,1.7,1.7,1.7];
 
 counter = 0;
-for i = P2_50
+for i = P2_50a
     % Room temperature about 294.26
     counter = counter + 1;
+    
+    % Find the temperature at which the vapor pressure
+    % is equal to P2
     zero_fun = @(T)(r22_sat_pressure(T) - i);
     Tsat_vec_50(counter) = fzero(zero_fun,294.26);
 end
 
 counter = 0;
-for n = P2_15
+for n = P2_15a
     % Room temperature about 294.26
     counter = counter + 1;
+    
+    % Find the temperature at which the vapor pressure
+    % is equal to P2
     zero_fun = @(T)(r22_sat_pressure(T) - n);
-    Tsat_vec_15(counter) = fzero(zero_fun,294.26);
+    Tsat_vec_15(counter) = fzero(zero_fun,273);
 end
 
-super_heat_vec_50 = (294.26 - Tsat_vec_50);
-super_heat_vec_15 = (294.26 - Tsat_vec_15);
+super_heat_vec_50 = (273.15 - Tsat_vec_50) * 1.8;
+super_heat_vec_15 = (273.15 - Tsat_vec_15) * 1.8;
 
 figure(1)
 hold on
-plot(flow_rate_50,super_heat_vec_50)
-plot(flow_rate_15,super_heat_vec_15)
-legend('P_1 = 50 psig','P_1 = 15 psig')
+plot(flow_rate_50,super_heat_vec_50,'.-')
+plot(flow_rate_15,super_heat_vec_15,'o-')
+legend('P_1 = 50 psig','P_1 = 15 psig','location','southeast')
 xlabel('Flow Rate (scfm)')
+ylabel('Degrees of Superheat (\circF)')
 
 figure(2)
 plot(P2_50,flow_rate_50,'.-',P2_15,flow_rate_15,'o-')
