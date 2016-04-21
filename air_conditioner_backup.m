@@ -1,4 +1,4 @@
-function air_conditioner
+function air_conditioner_backup
 
 C_power = 3.6; %kWh/rev
 B_meter = 14.4; %kWh/rev
@@ -20,17 +20,13 @@ T = [72.6, 73.3, 66.4, 61.9, 79.2, 55.7, 47.6, 50.6, 52.5]; %F
 T_use = convert_to_Kelvin(T);
 H_air = [67.45, 44.19]; %Enthalpy of air going into and out of evaporator, kJ/kg-dry
 H_condensate = 37.80; %kJ/kg, assumed to be saturated liquid at exit wet bulb
-H_refrig = [20.045, 35.771]; %Enthalpy of refrigerant going into and out of evaporator, kJ/mol
+H_refrig = [20.045, 20.045, 35.771, 37.952]; %Enthalpy of refrigerant, kJ/mol
 mass_ratio = [0.013, 0.0065]; %Mass water/mass dry air, inlet and outlet
 comp_time = 8.89; %s
 blow_time = 231.5; %s
-power = calc_power([C_power, B_meter],[comp_time,blow_time]); %kW
 ref_flow = 758; %Refrigerant pulse
 
 disp('--------------------------LOW FLOW RATE--------------------------')
-%Coefficient of performance
-[CoP] = coeff_performance(ref_flow, H_refrig, power);
-fprintf('Coefficient of performance: %f\n',CoP)
 
 anemometer = 1.22;
 humidity_in = 0.638;
@@ -50,18 +46,13 @@ T = [72.8, 73.3, 66.3, 63.9, 80.8, 61.3, 56.4, 57.8, 59.8]; %F
 T_use = convert_to_Kelvin(T);
 H_air = [67.78, 56.99]; %kJ/kg-dry
 H_condensate = 37.80; %kJ/kg, assumed to be saturated liquid at exit wet bulb
-H_refrig = [20.129, 35.879]; %kJ/mol
+H_refrig = [20.141, 20.141, 35.879, 37.932]; %kJ/mol
 mass_ratio = [0.013, 0.010]; %Mass water/mass dry air, inlet and outlet
 comp_time = 8.53; %s
 blow_time = 144.5; %s
-power = calc_power([C_power, B_meter],[comp_time,blow_time]); %kW
 ref_flow = 843; %Refrigerant pulse
 
 disp('--------------------------HIGH FLOW RATE--------------------------')
-%Coefficient of performance
-[CoP] = coeff_performance(ref_flow, H_refrig, power);
-fprintf('Coefficient of performance, low flow rate: %f\n',CoP)
-
 anemometer = 1.44;
 humidity_in = 0.650;
 humidity_out = 0.955;
@@ -106,15 +97,27 @@ function calc_all(H_air, H_condensate, mass_ratio, anemometer, condense_flow, T_
 H_in = m_in_dry*H_air(1); %kJ/s
 H_out = m_out_dry*H_air(2); %kJ/s
 
-%Energy balance to find heat loss
+%Energy balance, evaporator
 refrig_flow = molar_flow_rate_refrig(refrig_pulse); %mol/s
-Q_ref = refrig_flow*(H_refrig(2) - H_refrig(1)); %kJ/s
+Q_ref = refrig_flow*(H_refrig(3) - H_refrig(2)); %kJ/s
 Q_air = H_out - H_in;
 Q_condensate = m_water*H_condensate;
-
 Q_loss = abs(Q_condensate + Q_air + Q_ref);
 
+%Energy balance, condenser
+Q_cond = refrig_flow*abs((H_refrig(1)-H_refrig(4)));
+
+%Energy balance and power requirement, compressor
+Q_comp = refrig_flow*abs(H_refrig(4)-H_refrig(3));
+power = calc_power(power_per_rev, rev_time);
+power_C = power(1);
+eff = Q_comp/power_C;
+
+%Coefficient of performance
+CoP = coeff_performance(H_refrig);
+
 %Print results
+fprintf('\nEVAPORATOR PART, AIR AND WATER STREAMS\n\n')
 fprintf('Specific enthalpy, inlet air: %.2f kJ/kg-dry\n',H_air(1))
 fprintf('Total enthalpy, inlet air: %.2f kJ/s\n',H_in)
 fprintf('Specific enthalpy, outlet air: %.2f kJ/kg-dry\n',H_air(2))
@@ -123,21 +126,23 @@ fprintf('Specific enthalpy, condensate: %.2f kJ/kg\n',H_condensate)
 fprintf('Total enthalpy, condensate: %.4f kJ/s\n',Q_condensate)
 fprintf('Heat loss: %.2f kJ/s\n',Q_loss)
 
+fprintf('\nHEAT DUTIES, EVAPORATOR AND CONDENSER\n\n')
+fprintf('Evaporator: %.2f kJ/s\n',Q_ref)
+fprintf('Condenser: %.2f kJ/s\n',Q_cond)
+
+fprintf('\nOTHER\n\n')
+fprintf('Compressor power: %.2f kW\n',power_C)
+fprintf('Compressor enthalpy change: %.2f kJ/s\n', Q_comp)
+fprintf('Compressor efficiency: %.3f kJ/s\n', eff)
+fprintf('Coefficient of performance: %.2f\n',CoP)
+fprintf('\n')
+
 end
 
-function [CoP] = coeff_performance(refrig_pulse, H_refrig, power)
+function [CoP] = coeff_performance(H_refrig)
+%Coefficient of performance, sourced from thermo textbook
 
-refrig_flow = molar_flow_rate_refrig(refrig_pulse); %mol/s
-Qc = refrig_flow*(H_refrig(2) - H_refrig(1)); %kJ/s
-CoP = Qc/power; %dimensionless
-
-end
-
-function [eff] = compressor_efficiency(W, T1, P1, P2)
-%Compressor efficiency
-
-Ws = Cp*T1*((P2/P1)^(R/Cp) - 1); %Sourced from thermo textbook
-eff = W/Ws;
+CoP = (H_refrig(3)-H_refrig(2))/(H_refrig(4)-H_refrig(3)); %dimensionless
 
 end
 
@@ -201,9 +206,9 @@ flow_rate = (pulse*0.03204*0.000001052*1184)/0.08647; %mol/s
 end
 
 function [power] = calc_power(power_per_rev, rev_time)
-%Compute total power input, power_per_rev in kWh/rev, rev_time in s
+%Compute power input, power_per_rev in Wh/rev, rev_time in s
 
-power = sum(power_per_rev./(rev_time/3600));
+power = power_per_rev./(1000*rev_time/3600);
 
 end
 
