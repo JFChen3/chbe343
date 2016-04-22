@@ -90,26 +90,87 @@ t_out = t_in - Qc / (mass_airflow * cp_air);
 t_r22_in = 308.706; %K (96 degF)
 p_high = r22_sat_pressure(319.817); %psia (116 degF)
 
-t_r22_out = t_out;
+t_r22_out = t_out + 2.8; %5 degF above the outlet air temperature
 p_low = r22_sat_pressure(t_r22_out - 10.11); %psia (10.11 degC is 18.2 degF)
+
+disp(p_low)
 
 % Enthalpies
 % R22 in: P = 262 psia, T = 308.7 K
-H_in = 21.074; %kJ/mol
+H_in_22 = 21.074; %kJ/mol
 
-% R22 out: P = 74.9 psia, T = 284.5 K
-H_out = 35.710; %kJ/mol
+% R22 out: P = 74.9 psia, T = 287.2849 K
+H_out_22 = 35.807; %kJ/mol
+
+H_comp_22 = 38.786;
 
 % Choose R-22 enthalpy change in the high flow condition
-dH = H_out - H_in; %kJ/mol of R-22
+    function COP_calc(H_in,H_out,MW,H_comp)
+        dH = H_out - H_in; %kJ/mol
+        
+        disp(dH)
 
-molar_flow = Qc / dH; % mol_R22 / s
+        molar_flow = Qc / dH; % mol / s
 
-mass_flow = molar_flow * MW_R22; % g / s
+        mass_flow = molar_flow * MW; % g / s
+        
+        if exist('H_comp')
+            dH_comp = H_comp - H_out;
+            Ws = dH_comp * molar_flow;
+            W = Ws / efficiency;
+            fprintf('Power for Compressor = %.3f kW\n',W)
+        end
 
-compressor_power = Qc/COP; % kJ/s (kW)
+        compressor_power = Qc/COP; % kJ/s (kW)
 
-fprintf('Compressor Power: %.3f kW\n',compressor_power)
-fprintf('Refrigerant Flow: %.3f g/s\n',mass_flow)
+        fprintf('Compressor Power: %.3f kW\n',compressor_power)
+        fprintf('Refrigerant Flow: %.3f g/s\n',mass_flow)
+    end
+
+COP_calc(H_in_22,H_out_22,MW_R22,H_comp_22)
+
+% Part Two, changing the Refrigerant
+% 
+
+    function out = prop_sat_pressure(T)
+        % T in k
+        % P in bar
+        if T >= 230.6 && T < 320.7
+            A = 3.98292;
+            B = 819.296;
+            C = -24.417;
+        end
+        
+        logP = A - (B/(T+C));
+        P = 10^logP; %bar
+        out = P * 14.5038; %psia
+    end
+
+t_prop_in = 308.706; %K (96 degF)
+p_high_prop = prop_sat_pressure(319.817); %psia (116 degF)
+
+t_prop_out = t_out + 2.8; % 5 degF above outlet air temrperature
+p_low_prop = prop_sat_pressure(t_prop_out - 10.11); %psia (10.11 degC is 18.2 degF)
+
+disp(t_out + 2.8)
+% H in, 308.7060 K, 234.9027 psia
+H_in_prop = 12.991; % kj/mol
+
+
+% H out, 287.2849 K, 79.9789 psia
+H_out_prop = 24.192;
+
+% H after isentropic compression
+H_comp_prop = 28.657;
+
+MW_prop = 44.1; % g/mol
+
+COP_calc(H_in_prop,H_out_prop,MW_prop,H_comp_prop)
+
+disp(t_prop_in)
+disp(p_high_prop)
+disp(' ')
+disp(t_prop_out)
+disp(p_low_prop)
 
 end
