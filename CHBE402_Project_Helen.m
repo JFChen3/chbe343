@@ -1,15 +1,35 @@
 function CHBE402_Project_Helen
 
+%constants
+g = 9.81; %m/s^2
+R = 8.314; %J/molK
+Tm = 166 + 2713.15; %MP of IL
+dHfus = -19900; %J/mol
+dH = -58500; %J/mol
+dS = -143; %J/mol
+
+
+%To solvce for critical pressure and x1
+[K, x1crit, Pcrit] = solve_Pcrit(T, R, Tm, dHfus, dH, dS);
+
 %To solve for terminal velocity
-[vt, Re, Cd] = solve_vt(D, visc, rho_il, rho_co2);
+[vt, Re, Cd] = solve_vt(D, visc, rho_il, rho_co2, g);
 
 end
 
-function [vt, Re, Cd] = solve_vt(D, visc, rho_il, rho_co2)
+function [K, x1crit, Pcrit] = solve_Pcrit(T, R, Tm, dHfus, dH, dS)
+%Solves for Pcrit, depends on T
+
+dG = dH - T*dS;
+K = exp(-dG/(R*T);
+
+x1crit = exp((-dHfus/R).*((1/Tm) - (1./T)));
+Pcrit = (1-x1crit)./(x1crit.*K);
+end
+
+function [vt, Re, Cd] = solve_vt(D, visc, rho_il, rho_co2, g)
 %To solve for terminal velocity
 %needs rhos, CO2 viscosity, and diameter
-
-g = 9.81; %m/s^2
 
 vts = 0:0.01:20; %m/s
 Re_vals = Reynolds(vts, D, visc); %vt is terminal velocity
