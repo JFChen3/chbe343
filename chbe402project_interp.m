@@ -2,6 +2,8 @@ function chbe402project_interp
 
 %Convenience functions, nothing to see here
 
+%Test calculation
+co2_solubility(424-273, 0.4)
 end
 
 function [sol] = co2_solubility(T, P)
@@ -27,7 +29,7 @@ else
     T60 = interp1(P60, sol60, P, 'spline');
     T70 = interp1(P70, sol70, P, 'spline');
     T80 = interp1(P80, sol80, P, 'spline');
-    sol = interp1([60, 70, 80], [T60, T70, T80], T, 'spline');
+    sol = interp1([60, 70, 80], [T60, T70, T80], T, 'linear', 'extrap');
 end
 
 end
