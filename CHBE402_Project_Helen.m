@@ -3,14 +3,18 @@ function CHBE402_Project_Helen
 %constants
 g = 9.81; %m/s^2
 R = 8.314; %J/molK
-Tm = 166 + 2713.15; %MP of IL
+Tm = 166 + 273.15; %MP of IL
 dHfus = -19900; %J/mol
 dH = -58500; %J/mol
-dS = -143; %J/mol
+dS = -143; %J/mol*K
 
+%Test calculation
+T = 423;
 
 %To solvce for critical pressure and x1
 [K, x1crit, Pcrit] = solve_Pcrit(T, R, Tm, dHfus, dH, dS);
+
+Pcrit
 
 %To solve for terminal velocity
 [vt, Re, Cd] = solve_vt(D, visc, rho_il, rho_co2, g);
@@ -21,7 +25,7 @@ function [K, x1crit, Pcrit] = solve_Pcrit(T, R, Tm, dHfus, dH, dS)
 %Solves for Pcrit, depends on T
 
 dG = dH - T*dS;
-K = exp(-dG/(R*T);
+K = exp(-dG/(R*T));
 
 x1crit = exp((-dHfus/R).*((1/Tm) - (1./T)));
 Pcrit = (1-x1crit)./(x1crit.*K);
