@@ -76,7 +76,7 @@ as_mat = dragconstants(Re_vals);
 Cds = as_mat(:,1)' + as_mat(:,2)'./Re_vals + as_mat(:,3)'./(Re_vals.^2);
 
 %minimize to find vt
-func = 4*rho_IL*g - (3*Cds.*rho_CO2.*(vts.^2));
+func = 4*rho_IL*g*D - (3*Cds.*rho_CO2.*(vts.^2));
 minfunc = abs(func);
 index = (minfunc == min(minfunc));
 
@@ -159,4 +159,3 @@ T_range = [10, 20, 22, 30, 40, 50, 60, 70];
 density = [1.154, 1.147, 1.145, 1.140, 1.134, 1.128, 1.121, 1.115];
 rho = interp1(T_range, density, T, 'spline');
 end
-
