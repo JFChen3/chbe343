@@ -47,7 +47,7 @@ mu_CO2 = interp1(P_CO2, mus_CO2, Pcrit, 'spline'); %Pa*s
 
 [vt, ~, ~] = solve_vt(D, mu_CO2, rho_IL, rho_CO2, g); %terminal velocity in m/s
 
-
+vt
 %To solve for critical pressure and x1
 %[K, x1crit, Pcrit] = solve_Pcrit(T, R, Tm, dHfus, dH, dS);
 
@@ -70,8 +70,8 @@ function [vt, Re, Cd] = solve_vt(D, visc, rho_IL, rho_CO2, g)
 %To solve for terminal velocity
 %needs rhos, CO2 viscosity, and diameter
 
-vts = 0:0.01:20; %m/s
-Re_vals = Reynolds(vts, D, visc); %vt is terminal velocity
+vts = 0:0.01:50; %m/s
+Re_vals = Reynolds(vts, D, visc, rho_CO2); %vt is terminal velocity
 as_mat = dragconstants(Re_vals);
 Cds = as_mat(:,1)' + as_mat(:,2)'./Re_vals + as_mat(:,3)'./(Re_vals.^2);
 
@@ -84,12 +84,13 @@ index = (minfunc == min(minfunc));
 vt = vts(index);
 Re = Re_vals(index);
 Cd = Cds(index);
+
 end
 
-function [Re] = Reynolds(u, D, visc)
+function [Re] = Reynolds(u, D, visc, rho_CO2)
 %inputs are velocity, diameter, and velocity
 
-Re = u.*D./visc;
+Re = rho_CO2.*u.*D./visc;
 end
 
 function [as_mat] = dragconstants(Re_vals)
