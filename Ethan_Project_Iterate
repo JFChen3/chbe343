@@ -15,7 +15,7 @@ D = 0.002; %m
 Dab = .1e-4; %m^2/s at 1bar
 
 % Initialize everything
-xn = 0.65; % Mole fraction of IL
+xn = 0.75; % Mole fraction of IL
 T = 273.15 + 125; %K
 error = 100;
 tol = 0.001;
@@ -38,13 +38,13 @@ Feed_CO2_molar = Vapor_out_molar * (2-xn); %kmol/s
 Feed_ionic_molar = Feed_CO2_molar;
 Feed_mass = Feed_CO2_molar * (MW_CO2) + Feed_ionic_molar * (MW_IL); %kg/s
 Bottoms_out_molar = Feed_ionic_molar + Feed_CO2_molar * (1-xn);
+Bottoms_out_mass = Bottoms_out_molar * (xn*MW_IL + (1-xn)*MW_CO2); %kg/s
 
-Ln = Bottoms_out_molar; % kmol/s
+Liquid_Molar = Bottoms_out_molar; % kmol/s
 
 fprintf('Temperature: %.2f K\n', T)
-T_celsius = T - 273.15;
 
-rho_IL = IL_density(T_celsius);
+T_celsius = T - 273.15;
 
 %Open file for CO2 data: viscosity and density
 %Based on T = 415.27
@@ -60,6 +60,8 @@ vol_CO2 = CO2_data(:,4); % Molar Volume (m^3/mol)
 rho_CO2 = interp1(P_CO2, rhos_CO2, Pcrit, 'spline'); %kg/m^3
 mu_CO2 = interp1(P_CO2, mus_CO2, Pcrit, 'spline'); %Pa*s
 
+rho_IL = IL_density(T_celsius);
+
 [vt, ~, ~] = solve_vt(D, mu_CO2, rho_IL, rho_CO2, g); %terminal velocity in m/s
 
 %==========================================
@@ -70,7 +72,7 @@ mu_CO2 = interp1(P_CO2, mus_CO2, Pcrit, 'spline'); %Pa*s
 % Choose a height increment
 Area = 10; %m^2
 total_drops = Area / (2*D);
-dH = 20; %m
+dH = 2; %m
 dT = dH/vt; % If v = m/s, deltaT = s
 
 % Constant Properties
@@ -84,39 +86,35 @@ CO2_viscosityfun = @(P)(interp1(P_CO2, mus_CO2, P, 'spline')); %Pa*s
 A_drop = 4 * pi * (D / 2)^2; % M^2
 
 % Stage 1
-xi_bot = (1-xn);
-xc_bot = xn;
+xi_bot = xn;
+xco2_bot = xco2_from_xi(xi_bot,K);
+xcomp_bot = 1 - xi_bot - xco2_bot;
 % Rho function needed
 rho = IL_density(T_celsius); %kg/m^3
 %%%%%%%%%%%%%%%%%%%%%%
 
 % Functions needed
-Re = Reynolds(vt,D,CO2_viscosityfun(Pcrit),rho);
+Re = Reynolds(vt,D,CO2_viscosityfun(Pcrit),CO2_densityfun(Pcrit));
 hm = hmfunc(Dab,Re,CO2_viscosityfun(Pcrit),CO2_densityfun(Pcrit),dH);
 Sol = co2_solubility(T_celsius,Pcrit);
-%%%%%%%%%%%
-%z = interp1(P_CO2,vol_CO2,Pcrit,'spline') * 1000 * Pcrit / (Rbar * T);
-z = 1;
-%%%%%%%%%%%%%%%%%%%%%%%%
 
-ILconc = xi_bot*rho / (xc_bot*MW_Comp + xi_bot*MW_IL); %kmol/m^3
-
-Vapor_flow_n = total_drops*hm*A_drop*dT*(Sol*ILconc*MW_CO2 - Pcrit*MW_CO2/(z*Rbar*T));
+rho_CO2s = rho / (xi_bot*MW_IL + xcomp_bot*MW_Comp + xco2_bot*MW_CO2) * xco2_bot * MW_CO2;
+Vapor_flow_n = total_drops*hm*A_drop*dT*(rho_CO2s - CO2_densityfun(Pcrit));
 
 % Flow rate of Ln-1 * xn-1
-Lcomp = Ln*xc_bot - Vapor_flow_n;
+Lcomp = Liquid_Molar*(xcomp_bot+xco2_bot) - Vapor_flow_n;
 
-% Get Ln-1
-LnMinus = Ln - Vapor_flow_n;
+% Get xCO2 + xComplex of the stage above (both carbon containing species);
+x_combined = Lcomp / Liquid_Molar;
 
-% Get xn-1;
-xcMinus = Lcomp / LnMinus;
+xi = 1 - x_combined;
+xco2 = xco2_from_xi(xi,K);
+xcomp = 1 - xi - xco2;
 
 % Create the loop to iterate up the column
 counter = 0;
-while counter < 10;
+while counter < 80;
     counter = counter + 1;
-    disp(counter)
     
     % VnMinus is coming up from the layer below
     if counter == 1;
@@ -127,12 +125,9 @@ while counter < 10;
         Hvec(counter) = Hvec(counter-1) + dH;
     end
     
-    xiMinus = 1 - xcMinus;
-    
     % Find the pressure of the next stage using the concentration of IL
     % Using density from stage below
-    ILconc = xiMinus * rho / (xcMinus*MW_Comp + xiMinus*MW_IL);
-    Sol = K*xiMinus;
+    Sol = xcomp + xco2;
     
     % Numerically solve to find the P which delivers the necessary
     % Solubility
@@ -147,30 +142,36 @@ while counter < 10;
     mass_density_CO2 = CO2_densityfun(P); % kg/m^3
     Re = Reynolds(vt,D,CO2_viscosityfun(P),mass_density_CO2);
     hm = hmfunc(Dab,Re,CO2_viscosityfun(P),mass_density_CO2,dH);
-    %%%%%%%%%%%%%
-    %z = interp1(P_CO2,vol_CO2,P,'spline')* 1000 * P / (Rbar * T);
-    z = 1;
-    %%%%%%%%%%%%%
         
     % Solve for vapor flow rate out of the stage
-    Vn = total_drops*hm*A_drop*dT*(Sol*ILconc*MW_CO2 - P*MW_CO2/(z*Rbar*T));
-
+    rho_CO2s = rho / (xi*MW_IL + xcomp*MW_Comp + xco2*MW_CO2) * xco2 * MW_CO2;
+    
+    Vn = total_drops*hm*A_drop*dT*(rho_CO2s - CO2_densityfun(P));
+    Vn = Vn * 30000;
     deltaVn = Vn - VnMinus;
     
     % Solve for the Liquid flow rate coming into the stage
-    LcompMinus = LnMinus*xcMinus + deltaVn;
+    LcompMinus = Liquid_Molar*(xcomp + xco2) + deltaVn;
+       
+    % Get new combined molefraction of carbon containing species
+    x_combined = LcompMinus / Liquid_Molar;
     
-    % Get new total liquid flow rate
-    LnMinus = LnMinus + deltaVn;
-    
-    % Get new mole fraction of complex
-    xcMinus = LcompMinus / LnMinus;
+    xi = 1 - x_combined;
+    xco2 = xco2_from_xi(xi,K);
+    xcomp = 1 - xco2 - xi;
 end
 
 plot(Hvec,Pvec)
 % END OF ETHAN ADDED CODE
 %==========================================
 end
+
+function out = xco2_from_xi(xi,K)
+numer = 1 - xi;
+denom = (xi*K) * (1 + 1/(xi*K));
+out = numer / denom;
+end
+
 
 function [K, x1crit, Pcrit] = solve_Pcrit(T, R, Tm, dHfus, dH, dS)
 %Solves for Pcrit, depends on T
@@ -187,7 +188,7 @@ function [vt, Re, Cd] = solve_vt(D, visc, rho_IL, rho_CO2, g)
 %needs rhos, CO2 viscosity, and diameter
 
 vts = 0:0.01:50; %m/s
-Re_vals = Reynolds(vts, D, visc,rho_IL); %vt is terminal velocity
+Re_vals = Reynolds(vts, D, visc,rho_CO2); %vt is terminal velocity
 as_mat = dragconstants(Re_vals);
 Cds = as_mat(:,1)' + as_mat(:,2)'./Re_vals + as_mat(:,3)'./(Re_vals.^2);
 
@@ -273,7 +274,7 @@ function [rho] = IL_density(T)
 T_range = [10, 20, 22, 30, 40, 50, 60, 70];
 density = [1.154, 1.147, 1.145, 1.140, 1.134, 1.128, 1.121, 1.115];
 rho = interp1(T_range, density, T, 'spline'); % g/cm^3
-
+rho = rho*1000; %kg/m^3
 end
 
 function out = hmfunc(Dab,Re,viscosity,rho,L)
