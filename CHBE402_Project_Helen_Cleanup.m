@@ -30,9 +30,9 @@ dT = 0.01; %K, temp step
 while error > tol
     T = T + dT;
     [K, ~, Pcrit] = solve_Pcrit_and_K(T, R, Tm, dHfus, dH, dS); %Pcrit in bar
-    sol1 = CO2_solubility((T), Pcrit);
+    sol = CO2_solubility((T), Pcrit);
     z = solve_z(K, Pcrit); %NOTE: Pcrit converted to Pa?!!!!!!!!?
-    error = abs(sol1-z)/sol1;
+    error = abs(sol-z)/sol;
 end
 
 fprintf('Temperature: %.2f k\n', T);
@@ -43,11 +43,15 @@ mu_CO2 = CO2_viscosityfun(Pcrit); %Pa*s
 rho_IL = IL_density(T);
 [vt, ~, ~] = solve_vt(D, mu_CO2, rho_IL, rho_CO2, g); %terminal velocity in m/s
 
+
+
+%%%%%%%%%%%%%% START CODE THAT NEEDS UPDATING TO NEW K DEF %%%%%%%%%%%%%%%%%
+
 % Molar Flow out of bottom of column
 % Overall Mass Balance
 Vapor_out_mass = 596000 / 3600; %kg/s
 Vapor_out_molar = Vapor_out_mass / (MW_CO2); % kmol/s
-Feed_CO2_molar = Vapor_out_molar * (2-xi); %kmol/s
+Feed_CO2_molar = Vapor_out_molar * (2-xi); %kmol/s %%%%%%%%%%% This looks suspicious pls check
 Feed_ionic_molar = Feed_CO2_molar;
 Feed_mass = Feed_CO2_molar * (MW_CO2) + Feed_ionic_molar * (MW_IL); %kg/s
 Bottoms_out_molar = Feed_ionic_molar + Feed_CO2_molar * (1-xi);
@@ -64,16 +68,20 @@ dT = dH/vt; % If v = m/s, deltaT = s
 % Surface Area of the Drop (consider constant)
 A_drop = 4 * pi * (D/2)^2; % M^2
 
-% Stage 1
+% Stage 1, Helen updated mol fracs
 xi_bot = xi;
-xco2_bot = xco2_from_xi(xi_bot,K);
-xcomp_bot = 1 - xi_bot - xco2_bot;
+xcomp_bot = K*xi_bot*Pcrit;
+xco2_bot = sol - xcomp_bot;
+% xco2_bot = xco2_from_xi(xi_bot,K);
+% xcomp_bot = 1 - xi_bot - xco2_bot;
 %%%%%%%%%%%%%%%%%%%%%%
 
 % Functions needed
 Re = Reynolds(vt,D,CO2_viscosityfun(Pcrit),CO2_densityfun(Pcrit));
 hm = hmfunc(Dab,Re,CO2_viscosityfun(Pcrit),CO2_densityfun(Pcrit),dH);
 
+%currently, rho_as is density of CO2 dissolved in liquid
+% and rho_inf is density of CO2 at that stage
 rho_CO2s = rho_IL / (xi_bot*MW_IL + xcomp_bot*MW_Comp + xco2_bot*MW_CO2) * xco2_bot * MW_CO2;
 Vapor_flow_n = total_drops*hm*A_drop*dT*(rho_CO2s - CO2_densityfun(Pcrit));
 
@@ -83,9 +91,11 @@ Lcomp = Liquid_Molar*(xcomp_bot+xco2_bot) - Vapor_flow_n;
 % Get xCO2 + xComplex of the stage above (both carbon containing species);
 x_combined = Lcomp / Liquid_Molar;
 
-xi = 1 - x_combined;
-xco2 = xco2_from_xi(xi,K);
-xcomp = 1 - xi - xco2;
+% xi = 1 - x_combined;
+% xco2 = xco2_from_xi(xi,K);
+% xcomp = 1 - xi - xco2;
+xco2 = xco2_bot;
+xcomp = xcomp_bot;
 
 % Create the loop to iterate up the column
 counter = 0;
