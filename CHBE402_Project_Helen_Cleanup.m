@@ -21,18 +21,27 @@ Dab = .1e-4; %m^2/s at 1bar
 CO2_densityfun = @(P)(interp1(Ps_CO2, rhos_CO2, P, 'spline')); %kg/m^3
 CO2_viscosityfun = @(P)(interp1(Ps_CO2, mus_CO2, P, 'spline')); %Pa*s
 
-%Bottom stage: set xi and T, solved for other stuff
+%Bottom stage: set xi, find T, Pcrit, K, sol
 xi = 0.75; % Mole fraction of IL
-T = 415.27; %K, arbitrary temp
+T = 273.15 + 125; %K
+error = 100;
+tol = 0.001;
+dT = 0.01; %K, temp step
+while error > tol
+    T = T + dT;
+    [K, ~, Pcrit] = solve_Pcrit_and_K(T, R, Tm, dHfus, dH, dS); %Pcrit in bar
+    sol1 = CO2_solubility((T), Pcrit);
+    z = solve_z(K, Pcrit); %NOTE: Pcrit converted to Pa?!!!!!!!!?
+    error = abs(sol1-z)/sol1;
+end
 
-[K, ~, Pcrit] = solve_Pcrit_and_K(T, R, Tm, dHfus, dH, dS);
-Sol = CO2_solubility(T, Pcrit); %xc + xco2
+fprintf('Temperature: %.2f k\n', T);
 
+%Get CO2 properties at the T we found
 rho_CO2 = CO2_densityfun(Pcrit); %kg/m^3
 mu_CO2 = CO2_viscosityfun(Pcrit); %Pa*s
 rho_IL = IL_density(T);
 [vt, ~, ~] = solve_vt(D, mu_CO2, rho_IL, rho_CO2, g); %terminal velocity in m/s
-
 
 % Molar Flow out of bottom of column
 % Overall Mass Balance
@@ -53,7 +62,7 @@ dH = 2; %m
 dT = dH/vt; % If v = m/s, deltaT = s
 
 % Surface Area of the Drop (consider constant)
-A_drop = 4 * pi * (D / 2)^2; % M^2
+A_drop = 4 * pi * (D/2)^2; % M^2
 
 % Stage 1
 xi_bot = xi;
@@ -128,13 +137,11 @@ while counter < 80;
     xco2 = xco2_from_xi(xi,K);
     xcomp = 1 - xco2 - xi;
 end
-size(Hvec)
 
 plot(Hvec,Pvec)
 xlabel('Height (m)')
 ylabel('Pressure (bar)')
-% END OF ETHAN ADDED CODE
-%==========================================
+
 end
 
 function [out] = xco2_from_xi(xi,K)
@@ -236,6 +243,12 @@ end
 
 end
  
+function [sol] = solve_z(K, P)
+%Equilibrium equation, returns (xc + xco2)
+
+sol = K.*P./(1 + K.*P);
+end
+
 function [rho] = IL_density(T)
 % T in K
 
@@ -251,7 +264,7 @@ function [Ps_CO2, mus_CO2, rhos_CO2, vols_CO2] = CO2_data(MW_CO2)
 %Open file for CO2 data: viscosity and density
 %Based on T = 415.27
 CO2_fileID = fopen('CO2_data.txt');
-CO2_data = fscanf(CO2_fileID, '%f', [13, 191])';
+CO2_data = fscanf(CO2_fileID, '%f', [13, 193])';
 
 Ps_CO2 = CO2_data(:, 2)'; %bar
 mus_CO2 = CO2_data(:, 12)'; %Pa*s
@@ -267,23 +280,4 @@ function [out] = hmfunc(Dab,Re,viscosity,rho,L)
     Sc = nu/Dab;
     Sh = 2 + 0.6 * sqrt(Re) * Sc^(1/3);
     out = Dab*Sh/L;
-end
-
-function obsolete_code
-% Possibly no longer relevant to solve for T
-% must check with Sillies
-
-% T = 273.15 + 125; %K
-% error = 100;
-% tol = 0.001;
-% dT = 0.01; %K, temp step
-% 
-% % Solve for the pressure at the bottom of the dryer
-% while error > tol
-%     T = T + dT;
-%     [K, ~, Pcrit] = solve_Pcrit(T, R, Tm, dHfus, dH, dS);
-%     sol = CO2_solubility((T), Pcrit);
-%     xntemp = sol/K;
-%     error = abs(xi-xntemp)/xi;
-% end
 end
