@@ -13,7 +13,7 @@ MW_Comp = MW_CO2 + MW_IL; %g/mol
 D = 0.002; %m
 Dab = .1e-4; %m^2/s at 1bar
 Ad = 4*pi*(D/2)^2;
-V_drop_eff = (4/3)*pi*(D)^3; %m^3, effective vol of spaced droplet
+V_drop_eff = (4/3)*pi*(D/2)^3; %m^3, effective vol of spaced droplet
 
 %Obtain CO2 data and set up interpolation funcs
 [Ps_CO2, mus_CO2, rhos_CO2, vols_CO2] = CO2_data;
@@ -24,9 +24,9 @@ CO2_viscosityfun = @(P)(interp1(Ps_CO2, mus_CO2, P, 'spline')); %Pa*s
 % Set Initial Conditions
 zn = 0.35; % Molefraction of carbon containing components
 T = 434; %K
-Ac = 10; % m^2
-deltaH = 10; % m
-sphere_packing = 0.75;
+Ac = 5; % m^2
+deltaH = 100;
+sphere_packing = 0.52;
 
 N_drops = deltaH*Ac*sphere_packing/V_drop_eff; % Check after pressure gradient is found
 rho_IL = IL_density(T);
@@ -36,6 +36,7 @@ Vapor_out_mass = 596000 / 3600; %kg/s
 Vapor_out_molar = Vapor_out_mass / (MW_CO2); % kmol/s
 Carbon_in_molar = Vapor_out_molar / (1-zn); %kmol/s
 Total_in_molar = 2*Carbon_in_molar;
+disp(Total_in_molar*MW_Comp);
 
 ni = Carbon_in_molar; % Equimolar IL and Carbon (ni is an IL molar flow rate)
 
@@ -52,28 +53,27 @@ rhoN_mass = rhoN*MW_CO2; %kg/m^3
 
 viscosity = CO2_viscosityfun(Pcrit);
 vt = solve_vt(D, viscosity, rho_IL, rhoN_mass, g);
-dt = deltaH/vt; %s
 Re = Reynolds(vt, D, viscosity, rhoN_mass);
 
+Dab = get_Dab(Pcrit);
 hm = hmfunc(Dab, Re, viscosity, rhoN_mass, deltaH);
 
 % Solve for zn-1
 zMinus1 = zn + (hm*Ad*N_drops*(rhoS-rhoN))/ni;
 
-
 % Solve for Q
 Q = ni * (zMinus1 - zn) / rhoN; % m^3/s
 
 disp('Ps      rhoS    hm          rhoN    zMinus1  P      viscosity   vt      Re')
-fprintf('%.3f \t%.3f \t%.6f \t%.3f \t%.3f \t%.3f \t%.5f \t%.2f \t%.f\n', Ps, rhoS, hm, rhoN, zMinus1, Pcrit, viscosity, vt, Re)
-disp(' ')
-disp(' ')
+%fprintf('%.3f \t%.3f \t%.6f \t%.3f \t%.3f \t%.3f \t%.5f \t%.2f \t%.f\n', Ps, rhoS, hm, rhoN, zMinus1, Pcrit, viscosity, vt, Re)
+%disp(' ')
+%disp(' ')
 
 % End of bottom stage
 disp('    Ps      rhoS    hm          rhoN    zMinus1  P      viscosity   vt      Re')
 % While loop for the next stages 
 counter = 0;
-while zMinus1 < 1 % while zMinus < 1
+while zMinus1 < .99 % while zMinus < 1
    counter = counter + 1;
    
    % Record values brought from previous iteration
@@ -88,6 +88,10 @@ while zMinus1 < 1 % while zMinus < 1
    
    % Use convection equation to solve for the density at infinity
    rhoN = rhoS / (1+Q/(hm*Ad*N_drops)); %kmol/m^3
+   
+   deltaRhoVec(counter) = rhoMinus1 - rhoN;
+   hmvec(counter) = hm;
+   
    rhoN_mass = rhoN*MW_CO2; %kg/m^3
 
    % Use the new density to solve for the zMinus1
@@ -102,17 +106,24 @@ while zMinus1 < 1 % while zMinus < 1
    viscosity = CO2_viscosityfun(P);
    vt = solve_vt(D, viscosity, rho_IL, rhoN_mass, g);
    Re = Reynolds(vt,D,viscosity,rhoN_mass);
+   Dab = get_Dab(P);
    
    fprintf('%.f \t%.3f \t%.3f \t%.6f \t%.3f \t%.3f \t%.3f \t%.5f \t%.2f \t%.f\n', counter, Ps, rhoS, hm, rhoN, zMinus1, P, viscosity, vt, Re)
 end
 
-Hvec = (1:counter).*deltaH;
+deltaT = ni * (zn - z) / ((Ad*N_drops) * sum(hmvec.*deltaRhoVec));
+height = deltaT*(counter-1)*vt
+
+ni
+
+figure(1)
+plot(linspace(0,height,counter-5),Pvec(1:end-5),'linesmoothing','on','linewidth',1.5);
 
 %cut off last iteration because z > 1
-Hvec = Hvec(1:end-1);
-Pvec = Pvec(1:end-1);
+%Hvec = Hvec(1:end-1);
+%Pvec = Pvec(1:end-1);
 
-plot(Hvec, Pvec)
+%plot(Hvec, Pvec)
 xlabel('Height (m)')
 ylabel('Pressure (bar)')
 
@@ -169,6 +180,10 @@ index = (minfunc == min(minfunc));
 vt = vts(index);
 Re = Re_vals(index);
 Cd = Cds(index);
+end
+
+function out = get_Dab(P)
+    out = .2e-4 * 1/(P/.506);
 end
 
 function [Re] = Reynolds(u, D, visc, rho)
