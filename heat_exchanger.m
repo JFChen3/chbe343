@@ -14,7 +14,7 @@ density = [1115, 120]; %kg/m^3
 mu = [5.5e-2 ,3.1e-5]; %Dynamic viscosity, Pa*s
 nu = mu./density; %Kinematic viscosity
 k = [0.16, 0.05]; %Thermal conductivity, W/(m*K)
-Cp = [1200, 52]; %Heat capacity, J/(mol*K)
+Cp = [1200, 1181]; %Heat capacity, J/(kg*K)
 
 L_range = linspace(1,10,20)';
 eff_NTU_calc(mass_flow, density, mu, nu, k, Cp, L_range, [70+273, 600])
