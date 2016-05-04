@@ -9,8 +9,8 @@ function heat_exchanger
 MW_CO2 = 44.01;
 
 %%%DATA, listed in [IL, CO2] (Will be different for each stream integration stage)
-T = 424;
-P = 1;
+T = 492;
+P = 150;
 [CO2_cp, CO2_rho, enthalpy, entropy] = getProperties(T,P);
 
 mass_flow = [1649.52, 596000/3600]; %kg/s
@@ -21,7 +21,7 @@ k = [0.16, 0.056]; %Thermal conductivity, W/(m*K)
 Cp = [1800, CO2_cp * 1000 / MW_CO2]; %Heat capacity, J/(kg*K)
 disp(Cp)
 
-L = 7;
+L = 15;
 
 %q_total = 1649.52*1200*91;
 %q_stage = q_total/5; % Include an earlier cooling stage
@@ -29,7 +29,7 @@ L = 7;
 enthalpy
 entropy
 
-Ti = [70+273, 434];
+Ti = [368.265, T];
 
 %dT = q_stage./(mass_flow.*Cp)
 q = eff_NTU_calc(mass_flow, density, mu, nu, k, Cp, L, [70+273, 434]);%, %q_stage)
