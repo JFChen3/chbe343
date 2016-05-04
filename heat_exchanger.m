@@ -1,121 +1,230 @@
-function heat_exchanger
+function CHBE402_Project_Pressure
+%constants
+g = 9.81; %m/s^2
+R = 8.314; %J/molK
+Rbar = 8.3144598e-2; % m^3 * bar / K*kmol
+Tm = 166 + 273.15; %K, MP of IL
+dHfus = -19900; %J/mol
+dH = -58500; %J/mol
+dS = -143; %J/mol
+MW_CO2 = 44.01; %g/mol
+MW_IL = 264.39; %g/mol
+MW_Comp = MW_CO2 + MW_IL; %g/mol
+D = 0.002; %m
+Dab = .1e-4; %m^2/s at 1bar
+Ad = 4*pi*(D/2)^2;
+V_drop_eff = (4/3)*pi*(D/2)^3; %m^3, effective vol of spaced droplet
 
-%Information needed/solved for:
-%Inlet, outlet temperatures
-%Flow rates
-%HX dimensions
-%Thermal data for CO2, IL: viscosity, thermal conductivity, heat capacity
-%Conductivity of tube material
+%Obtain CO2 data and set up interpolation funcs
+[Ps_CO2, mus_CO2, rhos_CO2, vols_CO2] = CO2_data;
+CO2_densityfun = @(P)(interp1(Ps_CO2, rhos_CO2, P, 'spline')); %kg/m^3
+CO2_viscosityfun = @(P)(interp1(Ps_CO2, mus_CO2, P, 'spline')); %Pa*s
 
-%%%DATA, listed in [IL, CO2] (Will be different for each stream integration stage)
-mass_flow = [1649.52, 596000/3600]; %kg/s
-density = [1115, 29.18]; %kg/m^3
-mu = [5.5e-2,3.44e-5]; %Dynamic viscosity, Pa*s
-nu = mu./density; %Kinematic viscosity
-k = [0.16, 0.056]; %Thermal conductivity, W/(m*K)
-Cp = [1800, 1170]; %Heat capacity, J/(kg*K)
 
-L_range = linspace(1,10)';
+% Set Initial Conditions
+zn = 0.35; % Molefraction of carbon containing components
+T = 434; %K
+Ac = 5; % m^2
+deltaH = 100;
+sphere_packing = 0.52;
 
-q_total = 1649.52*1200*91;
-q_stage = q_total/4;
+N_drops = deltaH*Ac*sphere_packing/V_drop_eff; % Check after pressure gradient is found
+rho_IL = IL_density(T);
 
-dT = q_stage./(mass_flow.*Cp)
-eff_NTU_calc(mass_flow, density, mu, nu, k, Cp, L_range, [70+273, 634], q_stage)
+% Overall Mass Balance
+Vapor_out_mass = 596000 / 3600; %kg/s
+Vapor_out_molar = Vapor_out_mass / (MW_CO2); % kmol/s
+Carbon_in_molar = Vapor_out_molar / (1-zn); %kmol/s
+Total_in_molar = 2*Carbon_in_molar;
+disp(Total_in_molar*MW_Comp);
+
+ni = Carbon_in_molar; % Equimolar IL and Carbon (ni is an IL molar flow rate)
+
+% Start of Flow chart
+% Bottom-most stage
+%%%%%%%%
+[K, ~, Pcrit] = solve_Pcrit_and_K(T, R, Tm, dHfus, dH, dS);
+
+Ps = zn / (K*(1-zn)); % Surface pressure at bottom of tower (in bar)
+
+rhoS = CO2_densityfun(Ps); %kmol/m^3
+rhoN = CO2_densityfun(Pcrit); %kmol/m^3
+rhoN_mass = rhoN*MW_CO2; %kg/m^3
+
+viscosity = CO2_viscosityfun(Pcrit);
+vt = solve_vt(D, viscosity, rho_IL, rhoN_mass, g);
+Re = Reynolds(vt, D, viscosity, rhoN_mass);
+
+Dab = get_Dab(Pcrit);
+hm = hmfunc(Dab, Re, viscosity, rhoN_mass, deltaH);
+
+% Solve for zn-1
+zMinus1 = zn + (hm*Ad*N_drops*(rhoS-rhoN))/ni;
+
+% Solve for Q
+Q = ni * (zMinus1 - zn) / rhoN; % m^3/s
+
+disp('Ps      rhoS    hm          rhoN    zMinus1  P      viscosity   vt      Re')
+%fprintf('%.3f \t%.3f \t%.6f \t%.3f \t%.3f \t%.3f \t%.5f \t%.2f \t%.f\n', Ps, rhoS, hm, rhoN, zMinus1, Pcrit, viscosity, vt, Re)
+%disp(' ')
+%disp(' ')
+
+% End of bottom stage
+disp('    Ps      rhoS    hm          rhoN    zMinus1  P      viscosity   vt      Re')
+% While loop for the next stages 
+counter = 0;
+while zMinus1 < .99 % while zMinus < 1
+   counter = counter + 1;
+   
+   % Record values brought from previous iteration
+   z = zMinus1;
+   rhoMinus1 = rhoN; %kmol/m^3
+   rhoMinus1_mass = rhoMinus1*MW_CO2; %kg/m^3
+   
+   Ps = z/(K*(1-z));
+   rhoS = CO2_densityfun(Ps); %kmol/m^3
+   
+   hm = hmfunc(Dab, Re, viscosity, rhoMinus1_mass, deltaH);
+   
+   % Use convection equation to solve for the density at infinity
+   rhoN = rhoS / (1+Q/(hm*Ad*N_drops)); %kmol/m^3
+   
+   deltaRhoVec(counter) = rhoMinus1 - rhoN;
+   hmvec(counter) = hm;
+   
+   rhoN_mass = rhoN*MW_CO2; %kg/m^3
+
+   % Use the new density to solve for the zMinus1
+   zMinus1 = (Q*rhoN)/(ni*MW_CO2) + z;
+   
+   % Solve for P
+   zerofun = @(P)(CO2_densityfun(P) - rhoN);
+   P = fzero(zerofun,1);
+   Pvec(counter) = P;
+   
+   % Re-evaluate viscosity
+   viscosity = CO2_viscosityfun(P);
+   vt = solve_vt(D, viscosity, rho_IL, rhoN_mass, g);
+   Re = Reynolds(vt,D,viscosity,rhoN_mass);
+   Dab = get_Dab(P);
+   
+   fprintf('%.f \t%.3f \t%.3f \t%.6f \t%.3f \t%.3f \t%.3f \t%.5f \t%.2f \t%.f\n', counter, Ps, rhoS, hm, rhoN, zMinus1, P, viscosity, vt, Re)
+end
+
+deltaT = ni * (zn - z) / ((Ad*N_drops) * sum(hmvec.*deltaRhoVec));
+height = deltaT*(counter-1)*vt
+
+ni
+
+figure(1)
+plot(linspace(0,height,counter-5),Pvec(1:end-5),'linesmoothing','on','linewidth',1.5);
+
+%cut off last iteration because z > 1
+%Hvec = Hvec(1:end-1);
+%Pvec = Pvec(1:end-1);
+
+%plot(Hvec, Pvec)
+xlabel('Height (m)')
+ylabel('Pressure (bar)')
 
 end
 
-function [L_exchanger] = eff_NTU_calc(mass_flow, density, mu, nu, k, Cp, L, Ti, q_stage)
-%Eff-NTU calculation to get q vs L
+function [out] = hmfunc(Dab,Re,viscosity,rho,L)
+    % L is the deltaH at a stage
+    % V is terminal velocity in most cases
+    nu = viscosity / rho;
+    Sc = nu/Dab;
+    Sh = 2 + 0.6 * sqrt(Re) * Sc^(1/3);
+    out = Dab*Sh/L;
+end
 
-%%%Tube dimensions
-%Shell
-D_large = 4.0;
-A_large = pi*(D_large/2)^2;
-%Inner tube
-Di = 0.03;
-Do = 0.0315;
-A_small = pi*(Di/2)^2;
-A_tube = pi*(Do/2)^2;
-N_tubes = floor(A_large/(A_tube*2)); %Number of tubes that fit
-% N_tubes = 1000;
-fprintf('Number of tubes: %.0f\n', N_tubes)
-kt = 385; %Stainless steel tube
+function [Ps_CO2, mus_CO2, rhos_CO2, vols_CO2] = CO2_data
 
-%Convert mass flow rates to volumetric flow rates and velocities
-volume_flow = mass_flow ./density;
-v = volume_flow ./ ([(A_small*N_tubes), (A_large-N_tubes*A_tube)]); %Assume IL on inside
+%Open file for CO2 data: viscosity and density
+%Based on T = 415.27
+CO2_fileID = fopen('CO2_data.txt');
+CO2_data = fscanf(CO2_fileID, '%f', [13, 193])';
 
-Re = reynolds(nu, v, L); %Reynolds number
-
-Pr = prandtl(Cp, mu, k); %Prandtl number
-
-%%CO2 pressure drop, check to see if need to include
-f = 0.184*(Re(2))^-0.2;
-dP = (f.*density(2).*(v(2))^2.*L)./(2*D_large);
-
-
-hi = (k(1)*nusselt(Re(:,1),Pr(1)))./L; %Convection coefficient
-ho = (k(2)*nusselt(Re(:,2),Pr(2)))./L; 
-
-qmax = min(mass_flow.*Cp)*(Ti(2)-Ti(1)); %Max possible heat transfer
-
-UA = heat_transfer_coeff(Di, Do, L, kt, hi, ho); %Total heat transfer coeffs
-NTU = UA./(min(Cp.*mass_flow)); %Number of transfer units
-Cr = min(Cp.*mass_flow)/max(Cp.*mass_flow); %Heat capacity ratio
-
-eps = eff_shell(NTU, Cr);
-n=2;
-x = (1-eps.*Cr)./(1-eps).^n;
-eps_shell = (x - 1)./(x - Cr); %Multi shell pass
-%Heat duty
-q_shell = N_tubes*eps_shell.*qmax;
-
-plot(L, q_shell)
-xlabel('Exchanger Tube Length')
-ylabel('Heat Duty')
-
-L_sufficient = L(q_shell > q_stage);
-L_exchanger = L_sufficient(1);
+Ps_CO2 = CO2_data(:, 2)'; %bar
+mus_CO2 = CO2_data(:, 12)'; %Pa*s
+rhos_CO2 = CO2_data(:, 3)'./1000; %kmol/m^3
+vols_CO2 = CO2_data(:,4); % Molar Volume (m^3/mol)
 
 end
 
-function [Re] = reynolds(nu, v, L)
+function [K, x1crit, Pcrit] = solve_Pcrit_and_K(T, R, Tm, dHfus, dH, dS)
+%Solves for Pcrit, depends on T
 
-Re = L*(v./nu);
+dG = dH - T*dS;
+K = exp(-dG/(R*T));
 
+x1crit = exp((-dHfus/R).*((1/Tm) - (1./T)));
+Pcrit = (1-x1crit)./(x1crit.*K);
 end
 
-function [Pr] = prandtl(Cp, mu, k)
+function [vt, Re, Cd] = solve_vt(D, visc, rho_IL, rho_CO2m, g)
+%To solve for terminal velocity
+%needs rhos, CO2 viscosity, and diameter
 
-Pr = (Cp.*mu)./k;
+vts = 0:0.01:50; %m/s
+Re_vals = Reynolds(vts, D, visc, rho_CO2m); %vt is terminal velocity
+as_mat = dragconstants(Re_vals);
+Cds = as_mat(:,1)' + as_mat(:,2)'./Re_vals + as_mat(:,3)'./(Re_vals.^2);
 
+%minimize to find vt
+func = 4*rho_IL*g*D - (3*Cds.*rho_CO2m.*(vts.^2));
+minfunc = abs(func);
+index = (minfunc == min(minfunc));
+
+%final values
+vt = vts(index);
+Re = Re_vals(index);
+Cd = Cds(index);
 end
 
-function [Nu] = nusselt(Re, Pr)
-
-Nu = 0.023*Re.^(4/5).*Pr^(0.3); %Check to make sure this is right
-
+function out = get_Dab(P)
+    out = .2e-4 * 1/(P/.506);
 end
 
-function [UA] = heat_transfer_coeff(Di, Do, L, kt, hi, ho)
+function [Re] = Reynolds(u, D, visc, rho)
+%inputs are velocity, diameter, and velocity
 
-Ai = pi.*Di.*L;
-Ao = pi.*Do.*L;
-
-Ri = 1./(hi.*Ai);
-Rt = log(Do/Di)./(2.*pi.*kt.*L);
-Ro = 1./(ho.*Ao);
-
-UA = (Ri + Rt + Ro).^-1;
-
+Re = u.*rho.*D./visc;
 end
 
-function [epsilon] = eff_shell(NTU, Cr)
+function [as_mat] = dragconstants(Re_vals)
+%drag coefficient equation constants, dependent on Re
 
-x = sqrt(1+Cr^2);
-A = 1+exp(-NTU.*x);
-B = 1-exp(-NTU.*x);
-epsilon = 2*(1+Cr+x.*(A./B)).^-1;
+as_mat = zeros(length(Re_vals), 3);
+for i = 1:length(Re_vals)
+    Re = Re_vals(i);
+    if Re < 0.1
+        as = [0 24 0];
+    elseif Re < 1
+        as = [3.69 22.73 0.0903];
+    elseif Re < 10
+        as = [1.222 29.1667 -3.8889];
+    elseif Re < 100
+        as = [0.6167 46.6 -116.67];
+    elseif Re < 1000
+        as = [0.3644 98.33 -2778];
+    elseif Re < 5000
+        as = [0.357 148.62 -47500];
+    elseif Re < 10000
+        as = [0.46 -490546 578700];
+    elseif Re >= 10000
+        as = [0.5191 -1662.5 5416700];
+    end
+    as_mat(i, (1:3)) = as;
+end
+end
 
+function [rho] = IL_density(T)
+% T in K
+
+T = T - 273.15; %convert to C
+T_range = [10, 20, 22, 30, 40, 50, 60, 70];
+density = [1.154, 1.147, 1.145, 1.140, 1.134, 1.128, 1.121, 1.115];
+rho = interp1(T_range, density, T, 'spline'); % g/cm^3
+rho = rho*1000; %kg/m^3
 end
